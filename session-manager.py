@@ -55,7 +55,7 @@ def get_first_user_message(filepath):
                     continue
                 try:
                     obj = json.loads(line)
-                    if obj.get("type") == "user":
+                    if obj.get("type") == "user" and not obj.get("isMeta"):
                         content = obj.get("message", {}).get("content", "")
                         if isinstance(content, list):
                             texts = []
@@ -93,7 +93,7 @@ def get_session_stats(filepath):
                             first_ts = ts
                         last_ts = ts
                     t = obj.get("type", "")
-                    if t == "user":
+                    if t == "user" and not obj.get("isMeta"):
                         user_count += 1
                         if not first_user_msg:
                             content = obj.get("message", {}).get("content", "")
@@ -127,7 +127,7 @@ def get_session_summary(filepath, max_user_msgs=5):
                 try:
                     obj = json.loads(line)
                     t = obj.get("type", "")
-                    if t == "user":
+                    if t == "user" and not obj.get("isMeta"):
                         content = obj.get("message", {}).get("content", "")
                         if isinstance(content, list):
                             texts = []
@@ -406,7 +406,7 @@ def cmd_rename(index, new_title, project_filter=None):
         if not modified:
             try:
                 obj = json.loads(stripped)
-                if obj.get("type") == "user":
+                if obj.get("type") == "user" and not obj.get("isMeta"):
                     content = obj.get("message", {}).get("content", "")
                     if isinstance(content, list):
                         for c in content:
@@ -1250,7 +1250,7 @@ def cmd_web(port=8765):
             if not modified:
                 try:
                     obj = json.loads(stripped)
-                    if obj.get("type") == "user":
+                    if obj.get("type") == "user" and not obj.get("isMeta"):
                         content = obj.get("message", {}).get("content", "")
                         if isinstance(content, list):
                             for c in content:

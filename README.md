@@ -1,3 +1,18 @@
+# Session Manager for Claude Code
+
+A full-featured Claude Code session history management tool with CLI and Web UI. Zero external dependencies (pure Python stdlib).
+
+## Features
+
+- **Session list** — Browse all sessions across projects, with project name, date, size, message count, and title
+- **Preview** — View session details including user messages and tools used (`--all` / `--msgs N`)
+- **Rename** — Rename sessions, synced to `cc resume` list by updating the JSONL first user message + metadata
+- **Delete / Undelete** — Soft-delete sessions to trash, restore anytime
+- **Tag & Note** — Add custom tags and notes to sessions for organization
+- **Test session detection** — Auto-detect "who are you" / test sessions (`clean-test`)
+- **Backup / Restore** — Full backup of all projects + metadata + trash
+- **Web UI** — Sortable table, search/project filters, side-drawer preview
+
 ## Setup
 
 Copy the two files into your Claude Code config directory:
@@ -65,3 +80,11 @@ python ~/.claude/tools/session-manager.py clean-test
     ├── trash/                  ← soft-deleted sessions
     └── backups/                ← backup snapshots
 ```
+
+## How it works
+
+`cc resume` reads the **first real user message** (skipping `isMeta` system messages) from each session's `.jsonl` file as the title. Rename updates both:
+1. The JSONL first user message → immediately reflected in `cc resume`
+2. `meta.json` → used by the session manager tool for display
+
+Simply restart Claude Code after renaming to see the updated title in `/resume`.
