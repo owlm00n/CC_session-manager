@@ -15,14 +15,16 @@ A full-featured Claude Code session history management tool with CLI and Web UI.
 
 ## Setup
 
-Copy the two files into your Claude Code config directory:
-
 ```bash
+# 1. Tool script
 cp session-manager.py ~/.claude/tools/session-manager.py
-cp session-manager.md  ~/.claude/skills/session-manager.md
+
+# 2. Skill (must be directory/SKILL.md format)
+mkdir -p ~/.claude/skills/session-manager
+cp SKILL.md ~/.claude/skills/session-manager/SKILL.md
 ```
 
-Restart Claude Code or type `/session-manager` to start.
+Restart Claude Code, then type `/session-manager` to use.
 
 ## Requirements
 
@@ -72,13 +74,14 @@ python ~/.claude/tools/session-manager.py clean-test
 ```
 ~/.claude/
 ├── tools/
-│   └── session-manager.py      ← the tool
+│   └── session-manager.py           ← the CLI + Web UI tool
 ├── skills/
-│   └── session-manager.md      ← CC skill trigger
+│   └── session-manager/
+│       └── SKILL.md                 ← CC skill definition (directory format)
 └── session-manager/
-    ├── meta.json               ← custom titles, tags, notes
-    ├── trash/                  ← soft-deleted sessions
-    └── backups/                ← backup snapshots
+    ├── meta.json                    ← custom titles, tags, notes
+    ├── trash/                       ← soft-deleted sessions
+    └── backups/                     ← backup snapshots
 ```
 
 ## How it works
