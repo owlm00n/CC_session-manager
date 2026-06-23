@@ -83,8 +83,9 @@ python ~/.claude/tools/session-manager.py clean-test
 
 ## How it works
 
-`cc resume` reads the **first real user message** (skipping `isMeta` system messages) from each session's `.jsonl` file as the title. Rename updates both:
-1. The JSONL first user message → immediately reflected in `cc resume`
+`cc resume` displays the **latest `type: "last-prompt"` entry** from each session's `.jsonl` file as the title (not the first user message). Rename updates:
+1. All `last-prompt` entries in the JSONL → reflected in `/resume` after restart
 2. `meta.json` → used by the session manager tool for display
+3. A `.jsonl.bak` backup is created before writing
 
-Simply restart Claude Code after renaming to see the updated title in `/resume`.
+If a session has no `last-prompt` entry yet, one is appended.

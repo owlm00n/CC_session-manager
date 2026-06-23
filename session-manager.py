@@ -391,45 +391,41 @@ def cmd_rename(index, new_title, project_filter=None):
     meta["sessions"][uuid]["renamed_at"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     save_meta(meta)
 
-    # 2. Update JSONL first user message
-    lines = []
+    # 2. Update JSONL last-prompt entries (this is what /resume reads)
     with open(fpath, "r", encoding="utf-8") as f:
         lines = f.readlines()
 
-    modified = False
     new_lines = []
+    replaced = 0
     for line in lines:
         stripped = line.strip()
         if not stripped:
             new_lines.append(line)
             continue
-        if not modified:
-            try:
-                obj = json.loads(stripped)
-                if obj.get("type") == "user" and not obj.get("isMeta"):
-                    content = obj.get("message", {}).get("content", "")
-                    if isinstance(content, list):
-                        for c in content:
-                            if isinstance(c, dict) and c.get("type") == "text":
-                                c["text"] = new_title
-                    else:
-                        obj["message"]["content"] = new_title
-                    new_lines.append(json.dumps(obj, ensure_ascii=False) + "\n")
-                    modified = True
-                    continue
-            except json.JSONDecodeError:
-                pass
+        try:
+            obj = json.loads(stripped)
+            if obj.get("type") == "last-prompt":
+                obj["lastPrompt"] = new_title
+                new_lines.append(json.dumps(obj, ensure_ascii=False) + "\n")
+                replaced += 1
+                continue
+        except json.JSONDecodeError:
+            pass
         new_lines.append(line)
 
-    if modified:
-        backup_path = fpath.with_suffix(".jsonl.bak")
-        shutil.copy2(fpath, backup_path)
-        with open(fpath, "w", encoding="utf-8") as f:
-            f.writelines(new_lines)
-        print(f"Renamed #{index} -> {new_title}")
-        print(f"  JSONL updated + metadata saved + backup at .jsonl.bak")
-    else:
-        print("Could not find first user message in JSONL.")
+    # If no last-prompt entry exists, append one so /resume picks it up
+    if replaced == 0:
+        new_lines.append(json.dumps(
+            {"type": "last-prompt", "lastPrompt": new_title, "sessionId": uuid},
+            ensure_ascii=False) + "\n")
+
+    backup_path = fpath.with_suffix(".jsonl.bak")
+    shutil.copy2(fpath, backup_path)
+    with open(fpath, "w", encoding="utf-8") as f:
+        f.writelines(new_lines)
+    print(f"Renamed #{index} -> {new_title}")
+    print(f"  {replaced} last-prompt entries updated" if replaced else "  Appended new last-prompt entry")
+    print(f"  metadata saved + backup at .jsonl.bak")
 
 
 def cmd_delete(index, project_filter=None):
@@ -1237,37 +1233,33 @@ def cmd_web(port=8765):
         return ""
 
     def _update_jsonl_title(fpath, new_title):
-        lines = []
         with open(fpath, "r", encoding="utf-8") as f:
             lines = f.readlines()
-        modified = False
         new_lines = []
+        replaced = 0
         for line in lines:
             stripped = line.strip()
             if not stripped:
                 new_lines.append(line)
                 continue
-            if not modified:
-                try:
-                    obj = json.loads(stripped)
-                    if obj.get("type") == "user" and not obj.get("isMeta"):
-                        content = obj.get("message", {}).get("content", "")
-                        if isinstance(content, list):
-                            for c in content:
-                                if isinstance(c, dict) and c.get("type") == "text":
-                                    c["text"] = new_title
-                        else:
-                            obj["message"]["content"] = new_title
-                        new_lines.append(json.dumps(obj, ensure_ascii=False) + "\n")
-                        modified = True
-                        continue
-                except json.JSONDecodeError:
-                    pass
+            try:
+                obj = json.loads(stripped)
+                if obj.get("type") == "last-prompt":
+                    obj["lastPrompt"] = new_title
+                    new_lines.append(json.dumps(obj, ensure_ascii=False) + "\n")
+                    replaced += 1
+                    continue
+            except json.JSONDecodeError:
+                pass
             new_lines.append(line)
-        if modified:
-            shutil.copy2(fpath, fpath.with_suffix(".jsonl.bak"))
-            with open(fpath, "w", encoding="utf-8") as f:
-                f.writelines(new_lines)
+        if replaced == 0:
+            uuid = fpath.stem
+            new_lines.append(json.dumps(
+                {"type": "last-prompt", "lastPrompt": new_title, "sessionId": uuid},
+                ensure_ascii=False) + "\n")
+        shutil.copy2(fpath, fpath.with_suffix(".jsonl.bak"))
+        with open(fpath, "w", encoding="utf-8") as f:
+            f.writelines(new_lines)
 
     server = http.server.HTTPServer(("127.0.0.1", port), SessionAPI)
     url = f"http://127.0.0.1:{port}"
