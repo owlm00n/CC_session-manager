@@ -21,6 +21,7 @@ import json
 import shutil
 import sys
 import datetime
+import re
 from pathlib import Path
 
 HOME = Path(os.environ.get("USERPROFILE", os.path.expanduser("~")))
@@ -391,7 +392,7 @@ def cmd_rename(index, new_title, project_filter=None):
     meta["sessions"][uuid]["renamed_at"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     save_meta(meta)
 
-    # 2. Update JSONL last-prompt entries (this is what /resume reads)
+    # 2. Update JSONL last-prompt entries (string replacement preserves original formatting)
     with open(fpath, "r", encoding="utf-8") as f:
         lines = f.readlines()
 
@@ -399,25 +400,24 @@ def cmd_rename(index, new_title, project_filter=None):
     replaced = 0
     for line in lines:
         stripped = line.strip()
-        if not stripped:
+        if '"type":"last-prompt"' in stripped:
+            new_line = re.sub(
+                r'(?<="lastPrompt":)".*?(?<!\\)"',
+                f'"{new_title}"',
+                stripped,
+                count=1
+            )
+            new_lines.append(new_line + "\n")
+            replaced += 1
+        else:
             new_lines.append(line)
-            continue
-        try:
-            obj = json.loads(stripped)
-            if obj.get("type") == "last-prompt":
-                obj["lastPrompt"] = new_title
-                new_lines.append(json.dumps(obj, ensure_ascii=False) + "\n")
-                replaced += 1
-                continue
-        except json.JSONDecodeError:
-            pass
-        new_lines.append(line)
 
     # If no last-prompt entry exists, append one so /resume picks it up
     if replaced == 0:
-        new_lines.append(json.dumps(
-            {"type": "last-prompt", "lastPrompt": new_title, "sessionId": uuid},
-            ensure_ascii=False) + "\n")
+        new_lines.append(
+            '{"type":"last-prompt","lastPrompt":"%s","sessionId":"%s"}\n'
+            % (new_title.replace('"', '\\"'), uuid)
+        )
 
     backup_path = fpath.with_suffix(".jsonl.bak")
     shutil.copy2(fpath, backup_path)
@@ -1239,24 +1239,23 @@ def cmd_web(port=8765):
         replaced = 0
         for line in lines:
             stripped = line.strip()
-            if not stripped:
+            if '"type":"last-prompt"' in stripped:
+                new_line = re.sub(
+                    r'(?<="lastPrompt":)".*?(?<!\\)"',
+                    f'"{new_title}"',
+                    stripped,
+                    count=1
+                )
+                new_lines.append(new_line + "\n")
+                replaced += 1
+            else:
                 new_lines.append(line)
-                continue
-            try:
-                obj = json.loads(stripped)
-                if obj.get("type") == "last-prompt":
-                    obj["lastPrompt"] = new_title
-                    new_lines.append(json.dumps(obj, ensure_ascii=False) + "\n")
-                    replaced += 1
-                    continue
-            except json.JSONDecodeError:
-                pass
-            new_lines.append(line)
         if replaced == 0:
             uuid = fpath.stem
-            new_lines.append(json.dumps(
-                {"type": "last-prompt", "lastPrompt": new_title, "sessionId": uuid},
-                ensure_ascii=False) + "\n")
+            new_lines.append(
+                '{"type":"last-prompt","lastPrompt":"%s","sessionId":"%s"}\n'
+                % (new_title.replace('"', '\\"'), uuid)
+            )
         shutil.copy2(fpath, fpath.with_suffix(".jsonl.bak"))
         with open(fpath, "w", encoding="utf-8") as f:
             f.writelines(new_lines)
